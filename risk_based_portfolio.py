@@ -1,9 +1,10 @@
-from datetime import date
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from datetime import date
 from risk_based_methods import PORTFOLIO_FUNCS
+from tools import *
 
 
 class RiskBasedPortfolio:
@@ -175,6 +176,41 @@ class RiskBasedPortfolio:
         self.returns = pd.Series(
             self.nav.pct_change(), name="Return"
         )
+
+    def describe(self, method="naive", aum_start=100):
+        """
+        :param method: method for computing the portfolio returns (naive or realistic)
+        :param aum_start: reference value at the beginning of the portfolio
+        :return: descriptive statistics on the portfolio performance
+        """
+
+        if self.returns is None:
+            self.compute_returns(aum_start=aum_start)
+
+        portfolio_vol = self.returns.std()
+        portfolio_ann_returns = annualized_return(self.returns, freq="daily")
+        portfolio_sharpe = sharpe(self.returns, freq="daily")
+        portfolio_sortino = sortino(self.returns, freq="daily")
+        portfolio_calmar = calmar(self.returns, freq="daily")
+        portfolio_value = (self.weights * self.prices.loc[self.rebalancing_dates]).sum(axis=1)
+        max_dd = max_drawdown(portfolio_value)
+
+        stats = self.describe(method=method)
+        print(
+            f"----- Statistics for {self} portfolio -----\n"
+            f"Annualized Volatility : {portfolio_vol} \n"
+            f"Annualized Returns : {portfolio_ann_returns} \n"
+            f"Sharpe Ratio : {portfolio_sharpe} \n"
+            f"Maximum Drawdown : {max_dd} \n"
+            f"Sortino Ratio : {portfolio_sortino} \n"
+            f"Calmar Ratio : {portfolio_calmar} \n")
+
+        return {"volatility": portfolio_vol,
+                "ann_returns": portfolio_ann_returns,
+                "sharpe_ratio": portfolio_sharpe,
+                "max_drawdown": max_dd,
+                "sortino": portfolio_sortino,
+                "calmar": portfolio_calmar}
 
     def visualize_prices(self, path=None):
         """
