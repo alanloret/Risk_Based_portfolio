@@ -177,38 +177,18 @@ class RiskBasedPortfolio:
             self.nav.pct_change(), name="Return"
         )
 
-    def describe(self, aum_start=100, freq="daily"):
+    def describe(self, aum_start=100, freq="daily", verbose=False):
         """
-        :param method: method for computing the portfolio returns (naive or realistic)
+        :param str freq: frequency
         :param aum_start: reference value at the beginning of the portfolio
+        :param bool verbose: display parameter
         :return: descriptive statistics on the portfolio performance
         """
 
         if self.returns is None:
             self.compute_returns(aum_start=aum_start)
 
-        portfolio_vol = volatility(self.returns, freq=freq)
-        portfolio_ann_returns = annualized_return(self.returns, freq=freq)
-        portfolio_sharpe = sharpe(self.returns, freq=freq)
-        portfolio_sortino = sortino(self.returns, freq=freq)
-        max_dd = max_drawdown(self.truncated_nav(), freq="global")
-        portfolio_calmar = calmar(self.returns, freq=freq, freq_calmar="global")
-
-        print(
-            f"----- Statistics for {self} portfolio -----\n"
-            f"Annualized Volatility : {portfolio_vol:.5f} \n"
-            f"Annualized Returns : {portfolio_ann_returns:.5f} \n"
-            f"Sharpe Ratio : {portfolio_sharpe:.5f} \n"
-            f"Maximum Drawdown : {max_dd:.5f} \n"
-            f"Sortino Ratio : {portfolio_sortino:.5f} \n"
-            f"Calmar Ratio : {portfolio_calmar:.5f} \n")
-
-        return {"volatility": portfolio_vol,
-                "ann_returns": portfolio_ann_returns,
-                "sharpe_ratio": portfolio_sharpe,
-                "max_drawdown": max_dd,
-                "sortino": portfolio_sortino,
-                "calmar": portfolio_calmar}
+        return describe_stats(self.returns, freq=freq, verbose=verbose)
 
     def visualize_prices(self, path=None):
         """

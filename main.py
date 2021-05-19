@@ -19,7 +19,7 @@ if __name__ == "__main__":
     portfolio.compute_returns(aum_start=100)
 
     # Compute statistics
-    portfolio.describe()
+    portfolio.describe(verbose=True)
 
     # Show prices
     portfolio.visualize_prices(path=None)

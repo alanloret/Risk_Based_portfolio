@@ -145,10 +145,11 @@ def implied_returns_df(weights_df, cov_matrices, risk_aversion=1):
     return returns
 
 
-def describe(returns, freq="daily"):
+def describe_stats(returns, freq="daily", verbose=False):
     """
     :param Dataframe returns: returns
-    :param aum_start: reference value at the beginning of the portfolio
+    :param str freq: frequency
+    :param bool verbose: display parameter
     :return: descriptive statistics on the portfolio performance
     """
 
@@ -160,12 +161,28 @@ def describe(returns, freq="daily"):
     max_dd = max_drawdown(nav, freq="global")
     portfolio_calmar = calmar(returns, freq=freq, freq_calmar="global")
 
-    print(
-        f"----- Statistics  -----\n"
-        f"Annualized Volatility : {portfolio_vol:.5f} \n"
-        f"Annualized Returns : {portfolio_ann_returns:.5f} \n"
-        f"Sharpe Ratio : {portfolio_sharpe:.5f} \n"
-        f"Maximum Drawdown : {max_dd:.5f} \n"
-        f"Sortino Ratio : {portfolio_sortino:.5f} \n"
-        f"Calmar Ratio : {portfolio_calmar:.5f} \n")
+    if verbose:
+        print(
+            f"----- Statistics  -----\n"
+            f"Annualized Volatility : {portfolio_vol:.5f} \n"
+            f"Annualized Returns : {portfolio_ann_returns:.5f} \n"
+            f"Sharpe Ratio : {portfolio_sharpe:.5f} \n"
+            f"Maximum Drawdown : {max_dd:.5f} \n"
+            f"Sortino Ratio : {portfolio_sortino:.5f} \n"
+            f"Calmar Ratio : {portfolio_calmar:.5f} \n")
+
+    return {
+        "volatility": portfolio_vol,
+        "ann_returns": portfolio_ann_returns,
+        "sharpe_ratio": portfolio_sharpe,
+        "max_drawdown": max_dd,
+        "sortino": portfolio_sortino,
+        "calmar": portfolio_calmar,
+    }
+
+
+if __name__ == '__main__':
+    data = create_data()
+    MSCI_word_return = data.loc[:, data.columns[0]].pct_change()
+    describe_stats(MSCI_word_return, verbose=True)
 
