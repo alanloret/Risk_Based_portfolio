@@ -10,13 +10,16 @@ if __name__ == "__main__":
     portfolio = RiskBasedPortfolio(
         df,
         "monthly",
-        method="RW",
+        method="MinVar",
         start=date(2002, 1, 19)
     )
 
     # Compute weights and returns
     portfolio.compute_weights(window=252, verbose=0)
     portfolio.compute_returns(aum_start=100)
+
+    # Compute statistics
+    portfolio.describe()
 
     # Show prices
     portfolio.visualize_prices(path=None)
