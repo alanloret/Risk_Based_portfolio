@@ -177,7 +177,7 @@ class RiskBasedPortfolio:
             self.nav.pct_change(), name="Return"
         )
 
-    def describe(self, method="naive", aum_start=100):
+    def describe(self, aum_start=100, freq="daily"):
         """
         :param method: method for computing the portfolio returns (naive or realistic)
         :param aum_start: reference value at the beginning of the portfolio
@@ -187,23 +187,21 @@ class RiskBasedPortfolio:
         if self.returns is None:
             self.compute_returns(aum_start=aum_start)
 
-        portfolio_vol = self.returns.std()
-        portfolio_ann_returns = annualized_return(self.returns, freq="daily")
-        portfolio_sharpe = sharpe(self.returns, freq="daily")
-        portfolio_sortino = sortino(self.returns, freq="daily")
-        portfolio_calmar = calmar(self.returns, freq="daily")
-        portfolio_value = (self.weights * self.prices.loc[self.rebalancing_dates]).sum(axis=1)
-        max_dd = max_drawdown(portfolio_value)
+        portfolio_vol = volatility(self.returns, freq=freq)
+        portfolio_ann_returns = annualized_return(self.returns, freq=freq)
+        portfolio_sharpe = sharpe(self.returns, freq=freq)
+        portfolio_sortino = sortino(self.returns, freq=freq)
+        max_dd = max_drawdown(self.truncated_nav(), freq="global")
+        portfolio_calmar = calmar(self.returns, freq=freq, freq_calmar="global")
 
-        stats = self.describe(method=method)
         print(
             f"----- Statistics for {self} portfolio -----\n"
-            f"Annualized Volatility : {portfolio_vol} \n"
-            f"Annualized Returns : {portfolio_ann_returns} \n"
-            f"Sharpe Ratio : {portfolio_sharpe} \n"
-            f"Maximum Drawdown : {max_dd} \n"
-            f"Sortino Ratio : {portfolio_sortino} \n"
-            f"Calmar Ratio : {portfolio_calmar} \n")
+            f"Annualized Volatility : {portfolio_vol:.5f} \n"
+            f"Annualized Returns : {portfolio_ann_returns:.5f} \n"
+            f"Sharpe Ratio : {portfolio_sharpe:.5f} \n"
+            f"Maximum Drawdown : {max_dd:.5f} \n"
+            f"Sortino Ratio : {portfolio_sortino:.5f} \n"
+            f"Calmar Ratio : {portfolio_calmar:.5f} \n")
 
         return {"volatility": portfolio_vol,
                 "ann_returns": portfolio_ann_returns,

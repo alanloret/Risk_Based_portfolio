@@ -11,7 +11,7 @@ def create_data():
     """
 
     data = pd.read_excel(
-        "data/StatApp_Data.xlsx", sheet_name='Data', parse_dates=['Dates']
+        "data/StatApp_Data.xlsx", sheet_name='Data', parse_dates=['Dates'], engine='openpyxl'
     )
     data = data[data.Dates != 'None']
     data["Dates"] = pd.to_datetime(data.Dates, format="%Y-%m-%d %H:%M:%S")
@@ -21,14 +21,13 @@ def create_data():
 
 def annualized_return(return_data, freq="daily"):
     """annualized return: inputs are frequency of data and return data"""
-    xd = {"daily": 252, "monthly": 12, "weekly": 52}.get(freq, "daily")
+
+    window = {"daily": 252, "monthly": 12, "weekly": 52}.get(freq, 252)
     px_data = return_to_price_base100(return_data)
-    return (px_data.iloc[-1] / px_data.iloc[0]) ** (xd / len(px_data - 1)) - 1
+    return (px_data.iloc[-1] / px_data.iloc[0]) ** (window / len(px_data - 1)) - 1
 
 
 def volatility(return_data, freq="daily"):
-    """ Inputs are frequency of data and return data """
-
     vol = return_data.std()
     if freq == "monthly":
         return vol * np.sqrt(12)
@@ -40,7 +39,6 @@ def volatility(return_data, freq="daily"):
 
 
 def downside_vol(return_data, freq="daily"):
-    return_data = return_data.loc[return_data < 0]
     vol_ = return_data.loc[return_data < 0].std()
     if freq == "monthly":
         return vol_ * np.sqrt(12)
@@ -72,26 +70,22 @@ def sortino(return_data, freq="daily"):
     return annualized_return(return_data, freq=freq) / downside_vol(return_data, freq=freq)
 
 
-def calmar(return_data, freq="daily"):
-    return annualized_return(return_data, freq=freq) / max_drawdown(return_data)
+def calmar(return_data, freq="daily", freq_calmar="global"):
+    return annualized_return(return_data, freq=freq) / max_drawdown(return_data, freq=freq_calmar)
 
 
-def max_drawdown(portfolio_value):
-    max_dd = 0
-    dates = portfolio_value.index.tolist()
-    for i in range(len(dates) - 1):
-        if i < len(dates) - 1:
-            if portfolio_value.iloc[i+1] <= portfolio_value.iloc[i]:
-                original = portfolio_value.iloc[i]
-                j = i+1
-                dd = portfolio_value.iloc[i] - portfolio_value.iloc[j]
-                while j+1 < len(dates) and portfolio_value.iloc[j+1] <= portfolio_value.iloc[j]:
-                    dd = portfolio_value.iloc[i] - portfolio_value.iloc[j]
-                    j += 1
-                dd = dd / portfolio_value.iloc[i]
-                if dd > max_dd:
-                    max_dd = dd
-    return max_dd
+def max_drawdown(portfolio_value, freq="daily"):
+
+    window = {"daily": 252, "monthly": 12, "weekly": 52, "global": None}.get(freq, None)
+    if window is None:
+        roll_max = portfolio_value.cummax()
+        drawdown = portfolio_value / roll_max - 1.0
+        return drawdown.cummin().min()
+
+    else:
+        roll_max = portfolio_value.rolling(window, min_periods=1).max()
+        drawdown = portfolio_value / roll_max - 1.0
+        return drawdown.rolling(window, min_periods=1).min()
 
 
 def return_to_price_base100(return_data):
@@ -149,3 +143,29 @@ def implied_returns_df(weights_df, cov_matrices, risk_aversion=1):
         implied_return = implied_returns(weights, cov_matrix, risk_aversion)
         returns.loc[index] = implied_return
     return returns
+
+
+def describe(returns, freq="daily"):
+    """
+    :param Dataframe returns: returns
+    :param aum_start: reference value at the beginning of the portfolio
+    :return: descriptive statistics on the portfolio performance
+    """
+
+    portfolio_vol = volatility(returns, freq=freq)
+    portfolio_ann_returns = annualized_return(returns, freq=freq)
+    portfolio_sharpe = sharpe(returns, freq=freq)
+    portfolio_sortino = sortino(returns, freq=freq)
+    nav = (returns.fillna(0) + 1.0).cumprod()
+    max_dd = max_drawdown(nav, freq="global")
+    portfolio_calmar = calmar(returns, freq=freq, freq_calmar="global")
+
+    print(
+        f"----- Statistics  -----\n"
+        f"Annualized Volatility : {portfolio_vol:.5f} \n"
+        f"Annualized Returns : {portfolio_ann_returns:.5f} \n"
+        f"Sharpe Ratio : {portfolio_sharpe:.5f} \n"
+        f"Maximum Drawdown : {max_dd:.5f} \n"
+        f"Sortino Ratio : {portfolio_sortino:.5f} \n"
+        f"Calmar Ratio : {portfolio_calmar:.5f} \n")
+
